@@ -54,6 +54,10 @@ public class User {
     private String password;
 
     @Builder.Default
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
+
+    @Builder.Default
     @Column(name = "is_locked")
     private Boolean isLocked = false;
 
