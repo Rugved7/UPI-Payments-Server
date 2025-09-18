@@ -28,7 +28,8 @@ public class BankAccount {
 
     @NotBlank
     @Size(max = 20)
-    private long accountNumber;
+    @Column(name = "account_number")
+    private String accountNumber;
 
     @NotBlank
     @Size(max = 11)

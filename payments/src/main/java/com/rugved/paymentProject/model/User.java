@@ -47,6 +47,10 @@ public class User {
 
     @NotBlank
     @Size(max = 15)
+    private String phone;
+
+    @NotBlank
+    @Size(max = 15)
     private String password;
 
     @Builder.Default
