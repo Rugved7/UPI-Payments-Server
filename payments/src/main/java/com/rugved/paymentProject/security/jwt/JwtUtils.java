@@ -31,16 +31,16 @@ public class JwtUtils {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
 
         return Jwts.builder()
-                .setSubject(userPrincipal.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .subject(userPrincipal.getUsername()) // ✅ new API
+                .issuedAt(new Date())                 // ✅ new API
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs)) // ✅ new API
+                .signWith(getSigningKey())            // ✅ Algorithm auto-detected
                 .compact();
     }
 
     // Extract username from token
     public String getUsernameFromJwtToken(String token) {
-        return Jwts.parser()   // ✅ new API
+        return Jwts.parser()                   // ✅ use parserBuilder
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
@@ -51,7 +51,7 @@ public class JwtUtils {
     // Validate JWT Token
     public boolean validateJwtToken(String authToken) {
         try {
-            Jwts.parser()  // ✅ new API
+            Jwts.parser()                      // ✅ use parserBuilder
                     .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(authToken);
