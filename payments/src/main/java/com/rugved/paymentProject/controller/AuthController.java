@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,13 +26,15 @@ import java.util.stream.Collectors;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtils jwtUtils;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
-        if(authService.existsByEmail(signupRequest.getEmail())){
+        if (authService.existsByEmail(signupRequest.getEmail())) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Email already in use"));
         }
-        if(authService.existsByPhone(signupRequest.getPhone())){
+        if (authService.existsByPhone(signupRequest.getPhone())) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Phone already in use"));
         }
         var user = authService.registerUser(signupRequest);
@@ -39,7 +42,7 @@ public class AuthController {
     }
 
     @GetMapping("/check-email")
-    public ResponseEntity<ApiResponse> checkEmailActivity(@RequestParam String email){
+    public ResponseEntity<ApiResponse> checkEmailActivity(@RequestParam String email) {
         boolean avaliable = !authService.existsByEmail(email);
         return ResponseEntity.ok().body(ApiResponse.success("Email avaliablity checked", avaliable));
     }
@@ -49,5 +52,23 @@ public class AuthController {
         boolean available = !authService.existsByPhone(phone);
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Phone availability checked", available));
+    }
+
+
+    //    Login Endpoint
+    @PostMapping("/login")
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserPrincipal userDetails = (UserPrincipal) authentication.getPrincipal();
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), roles));
     }
 }
