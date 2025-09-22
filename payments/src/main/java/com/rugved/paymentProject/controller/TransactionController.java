@@ -70,5 +70,5 @@ public class TransactionController {
     }
 
     private record TransactionStatusResponse(String transactionId, Transaction.TransactionStatus status) {
-    }
+    }   
 }
