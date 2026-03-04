@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { Text, Card, Chip, IconButton } from 'react-native-paper';
+import { Text, Chip, IconButton } from 'react-native-paper';
+import CustomHeader from '../components/CustomHeader';
 import { transactionAPI } from '../services/api';
+import { colors, spacing } from '../config/theme';
 
-export default function TransactionHistoryScreen() {
+export default function TransactionHistoryScreen({ navigation }) {
   const [transactions, setTransactions] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -29,81 +31,113 @@ export default function TransactionHistoryScreen() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'SUCCESS': return '#4caf50';
-      case 'FAILED': return '#f44336';
-      case 'PENDING': return '#ff9800';
-      case 'PROCESSING': return '#2196f3';
-      default: return '#666';
+      case 'SUCCESS': return colors.dark.success;
+      case 'FAILED': return colors.dark.error;
+      case 'PENDING': return colors.dark.warning;
+      default: return colors.dark.textSecondary;
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'SUCCESS': return 'check-circle';
+      case 'FAILED': return 'close-circle';
+      case 'PENDING': return 'clock-outline';
+      default: return 'help-circle';
     }
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today, ' + date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday, ' + date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    } else {
+      return date.toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
   };
 
   return (
     <View style={styles.container}>
+      <CustomHeader 
+        title="Transaction History" 
+        onBack={() => navigation.goBack()}
+      />
+
       <ScrollView
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={colors.dark.primary}
+            colors={[colors.dark.primary]}
+          />
         }
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Transaction History</Text>
-
           {!transactions || transactions.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Card.Content>
-                <Text style={styles.emptyText}>No transactions yet</Text>
-                <Text style={styles.emptySubtext}>
-                  Your transaction history will appear here
-                </Text>
-              </Card.Content>
-            </Card>
+            <View style={styles.emptyState}>
+              <IconButton icon="history" size={64} iconColor={colors.dark.textSecondary} />
+              <Text style={styles.emptyText}>No transactions yet</Text>
+              <Text style={styles.emptySubtext}>Your transaction history will appear here</Text>
+            </View>
           ) : (
             transactions.map((transaction) => (
-              <Card key={transaction.transactionId} style={styles.transactionCard}>
-                <Card.Content>
-                  <View style={styles.transactionHeader}>
-                    <View style={styles.transactionInfo}>
-                      <IconButton
-                        icon={transaction.type === 'P2P_TRANSFER' ? 'swap-horizontal' : 'cash'}
-                        size={24}
-                        iconColor="#6200ee"
+              <View key={transaction.transactionId} style={styles.transactionCard}>
+                <View style={styles.transactionHeader}>
+                  <View style={[
+                    styles.iconContainer,
+                    { backgroundColor: transaction.type === 'CREDIT' ? colors.dark.success + '20' : colors.dark.error + '20' }
+                  ]}>
+                    <IconButton 
+                      icon={transaction.type === 'CREDIT' ? 'arrow-down' : 'arrow-up'} 
+                      size={24} 
+                      iconColor={transaction.type === 'CREDIT' ? colors.dark.success : colors.dark.error}
+                      style={{ margin: 0 }}
+                    />
+                  </View>
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionVpa}>
+                      {transaction.type === 'CREDIT' ? transaction.senderVpa : transaction.receiverVpa}
+                    </Text>
+                    <Text style={styles.transactionDate}>{formatDate(transaction.createdAt)}</Text>
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <Text style={[
+                      styles.transactionAmount,
+                      { color: transaction.type === 'CREDIT' ? colors.dark.success : colors.dark.text }
+                    ]}>
+                      {transaction.type === 'CREDIT' ? '+' : '-'}₹{parseFloat(transaction.amount).toLocaleString('en-IN')}
+                    </Text>
+                    <View style={styles.statusContainer}>
+                      <IconButton 
+                        icon={getStatusIcon(transaction.status)} 
+                        size={16} 
+                        iconColor={getStatusColor(transaction.status)}
+                        style={{ margin: 0 }}
                       />
-                      <View style={styles.transactionDetails}>
-                        <Text style={styles.transactionAmount}>
-                          ₹{transaction.amount.toFixed(2)}
-                        </Text>
-                        <Text style={styles.transactionVpa}>
-                          {transaction.senderVpa} → {transaction.recieverVpa}
-                        </Text>
-                      </View>
+                      <Text style={[styles.statusText, { color: getStatusColor(transaction.status) }]}>
+                        {transaction.status}
+                      </Text>
                     </View>
-                    <Chip 
-                      mode="flat" 
-                      style={[styles.statusChip, { backgroundColor: getStatusColor(transaction.status) }]}
-                      textStyle={styles.statusText}
-                    >
-                      {transaction.status}
-                    </Chip>
                   </View>
-
-                  {transaction.description && (
-                    <Text style={styles.description}>{transaction.description}</Text>
-                  )}
-
-                  <View style={styles.transactionFooter}>
-                    <Text style={styles.transactionId}>
-                      ID: {transaction.transactionId}
-                    </Text>
-                    <Text style={styles.transactionDate}>
-                      {formatDate(transaction.createdAt)}
-                    </Text>
-                  </View>
-                </Card.Content>
-              </Card>
+                </View>
+                {transaction.description && (
+                  <Text style={styles.description}>{transaction.description}</Text>
+                )}
+                <Text style={styles.transactionId}>ID: {transaction.transactionId}</Text>
+              </View>
             ))
           )}
         </View>
@@ -115,84 +149,87 @@ export default function TransactionHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.dark.background,
   },
   content: {
-    padding: 20,
+    padding: spacing.md,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#6200ee',
-  },
-  emptyCard: {
-    marginTop: 20,
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl * 2,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
+    fontWeight: '600',
+    color: colors.dark.text,
+    marginTop: spacing.md,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: colors.dark.textSecondary,
+    marginTop: spacing.sm,
   },
   transactionCard: {
-    marginBottom: 15,
+    backgroundColor: colors.dark.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
   },
   transactionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   transactionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    marginLeft: spacing.md,
   },
   transactionVpa: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.dark.text,
+    marginBottom: 2,
   },
-  statusChip: {
-    marginLeft: 10,
+  transactionDate: {
+    fontSize: 12,
+    color: colors.dark.textSecondary,
+  },
+  transactionRight: {
+    alignItems: 'flex-end',
+  },
+  transactionAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statusText: {
-    color: 'white',
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: -4,
   },
   description: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
-    fontStyle: 'italic',
-  },
-  transactionFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingTop: 10,
+    color: colors.dark.textSecondary,
+    marginTop: spacing.sm,
+    marginLeft: 60,
   },
   transactionId: {
-    fontSize: 10,
-    color: '#999',
-  },
-  transactionDate: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: 11,
+    color: colors.dark.textTertiary,
+    marginTop: spacing.sm,
+    marginLeft: 60,
   },
 });

@@ -1,36 +1,31 @@
 import React, { useState, useContext } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { TextInput, Button, Text, Snackbar } from 'react-native-paper';
+import { TextInput, Button, Text, Snackbar, IconButton } from 'react-native-paper';
 import { AuthContext } from '../context/AuthContext';
+import { colors, spacing } from '../config/theme';
 
 export default function SignupScreen({ navigation }) {
-  const [formData, setFormData] = useState({
-    firstname: '',
-    lastname: '',
-    email: '',
-    phone: '',
-    password: '',
-  });
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const { signup } = useContext(AuthContext);
 
   const handleSignup = async () => {
-    if (!formData.firstname || !formData.lastname || !formData.email || 
-        !formData.phone || !formData.password) {
+    if (!firstName || !lastName || !email || !phone || !password) {
       setError('Please fill all fields');
       return;
     }
 
     setLoading(true);
-    const result = await signup(formData);
+    const result = await signup({ firstName, lastName, email, phone, password });
     setLoading(false);
 
-    if (result.success) {
-      setSuccess('Account created! Please login');
-      setTimeout(() => navigation.navigate('Login'), 2000);
-    } else {
+    if (!result.success) {
       setError(result.message);
     }
   };
@@ -40,71 +35,119 @@ export default function SignupScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Create Account</Text>
+      <View style={styles.header}>
+        <IconButton 
+          icon="arrow-left" 
+          size={24} 
+          iconColor={colors.dark.text}
+          onPress={() => navigation.goBack()}
+        />
+      </View>
 
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Sign up to get started</Text>
+        </View>
+
+        <View style={styles.form}>
           <TextInput
             label="First Name"
-            value={formData.firstname}
-            onChangeText={(text) => setFormData({...formData, firstname: text})}
+            value={firstName}
+            onChangeText={setFirstName}
             mode="outlined"
             style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
           />
 
           <TextInput
             label="Last Name"
-            value={formData.lastname}
-            onChangeText={(text) => setFormData({...formData, lastname: text})}
+            value={lastName}
+            onChangeText={setLastName}
             mode="outlined"
             style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
           />
 
           <TextInput
             label="Email"
-            value={formData.email}
-            onChangeText={(text) => setFormData({...formData, email: text})}
+            value={email}
+            onChangeText={setEmail}
             mode="outlined"
             keyboardType="email-address"
             autoCapitalize="none"
             style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
           />
 
           <TextInput
             label="Phone"
-            value={formData.phone}
-            onChangeText={(text) => setFormData({...formData, phone: text})}
+            value={phone}
+            onChangeText={setPhone}
             mode="outlined"
             keyboardType="phone-pad"
             style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
           />
 
           <TextInput
             label="Password"
-            value={formData.password}
-            onChangeText={(text) => setFormData({...formData, password: text})}
+            value={password}
+            onChangeText={setPassword}
             mode="outlined"
-            secureTextEntry
+            secureTextEntry={!showPassword}
             style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
+            right={
+              <TextInput.Icon 
+                icon={showPassword ? "eye-off" : "eye"} 
+                onPress={() => setShowPassword(!showPassword)}
+                color={colors.dark.textSecondary}
+              />
+            }
           />
 
           <Button 
             mode="contained" 
             onPress={handleSignup}
             loading={loading}
-            disabled={loading}
             style={styles.button}
+            contentStyle={styles.buttonContent}
+            buttonColor={colors.dark.primary}
+            textColor={colors.dark.onPrimary}
           >
-            Sign Up
+            Create Account
           </Button>
 
-          <Button 
-            mode="text" 
-            onPress={() => navigation.navigate('Login')}
-            style={styles.linkButton}
-          >
-            Already have an account? Login
-          </Button>
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <Button 
+              mode="text" 
+              onPress={() => navigation.navigate('Login')}
+              labelStyle={styles.loginButton}
+              textColor={colors.dark.primary}
+            >
+              Login
+            </Button>
+          </View>
         </View>
       </ScrollView>
 
@@ -112,16 +155,9 @@ export default function SignupScreen({ navigation }) {
         visible={!!error}
         onDismiss={() => setError('')}
         duration={3000}
+        style={{ backgroundColor: colors.dark.error }}
       >
         {error}
-      </Snackbar>
-
-      <Snackbar
-        visible={!!success}
-        onDismiss={() => setSuccess('')}
-        duration={3000}
-      >
-        {success}
       </Snackbar>
     </KeyboardAvoidingView>
   );
@@ -130,30 +166,55 @@ export default function SignupScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.dark.background,
+  },
+  header: {
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.sm,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  content: {
-    padding: 20,
+  titleContainer: {
+    marginBottom: spacing.xl,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#6200ee',
+    fontWeight: '700',
+    color: colors.dark.text,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: colors.dark.textSecondary,
+  },
+  form: {
+    flex: 1,
   },
   input: {
-    marginBottom: 15,
+    marginBottom: spacing.md,
+    backgroundColor: colors.dark.surface,
   },
   button: {
-    marginTop: 10,
-    paddingVertical: 5,
+    marginTop: spacing.md,
+    borderRadius: 12,
   },
-  linkButton: {
-    marginTop: 10,
+  buttonContent: {
+    paddingVertical: spacing.sm,
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.lg,
+  },
+  loginText: {
+    fontSize: 14,
+    color: colors.dark.textSecondary,
+  },
+  loginButton: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

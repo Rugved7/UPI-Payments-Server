@@ -56,8 +56,16 @@ public class TransactionServiceImpl implements TransactionService {
 
             // Get receiver's VPA
             VirtualPaymentAddress receiverVpa = vpaRepository.findByVpa(request.getRecieverVpa())
-                    .orElseThrow(() -> new com.rugved.paymentProject.exception.BusinessException("Receiver VPA not found", 
+                    .orElseThrow(() -> new com.rugved.paymentProject.exception.BusinessException(
+                        "The VPA '" + request.getRecieverVpa() + "' does not exist. Please verify and try again.", 
                         com.rugved.paymentProject.exception.BusinessException.ErrorCodes.VPA_NOT_FOUND));
+
+            // Prevent self-transfer
+            if (receiverVpa.getUser().getId().equals(userId)) {
+                throw new com.rugved.paymentProject.exception.BusinessException(
+                    "You cannot send money to yourself", 
+                    com.rugved.paymentProject.exception.BusinessException.ErrorCodes.INVALID_TRANSACTION);
+            }
 
             // Validate transaction limits and balance
             if (!senderWallet.canTransact(request.getAmount())) {

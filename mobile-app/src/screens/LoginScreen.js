@@ -1,8 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { TextInput, Button, Text, Snackbar, IconButton } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
+import { colors, spacing } from '../config/theme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -32,87 +32,90 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <LinearGradient
-        colors={['#6200ee', '#7c3aed', '#9333ea']}
-        style={styles.gradient}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <IconButton icon="wallet" size={60} iconColor="#fff" />
-            </View>
-            <Text style={styles.title}>UPI Payment</Text>
-            <Text style={styles.subtitle}>Fast, Secure & Simple</Text>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <IconButton icon="wallet" size={64} iconColor={colors.dark.primary} />
           </View>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
+        </View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Welcome Back</Text>
-            <Text style={styles.formSubtitle}>Login to continue</Text>
+        <View style={styles.form}>
+          <TextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            mode="outlined"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
+            left={<TextInput.Icon icon="email-outline" color={colors.dark.textSecondary} />}
+          />
 
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              mode="outlined"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.input}
-              outlineColor="#e0e0e0"
-              activeOutlineColor="#6200ee"
-              left={<TextInput.Icon icon="email-outline" />}
-            />
+          <TextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            mode="outlined"
+            secureTextEntry={!showPassword}
+            style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
+            left={<TextInput.Icon icon="lock-outline" color={colors.dark.textSecondary} />}
+            right={
+              <TextInput.Icon 
+                icon={showPassword ? "eye-off" : "eye"} 
+                onPress={() => setShowPassword(!showPassword)}
+                color={colors.dark.textSecondary}
+              />
+            }
+          />
 
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              mode="outlined"
-              secureTextEntry={!showPassword}
-              style={styles.input}
-              outlineColor="#e0e0e0"
-              activeOutlineColor="#6200ee"
-              left={<TextInput.Icon icon="lock-outline" />}
-              right={
-                <TextInput.Icon 
-                  icon={showPassword ? "eye-off" : "eye"} 
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-            />
+          <Button 
+            mode="contained" 
+            onPress={handleLogin}
+            loading={loading}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            buttonColor={colors.dark.primary}
+            textColor={colors.dark.onPrimary}
+          >
+            Login
+          </Button>
 
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupText}>Don't have an account? </Text>
             <Button 
-              mode="contained" 
-              onPress={handleLogin}
-              loading={loading}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
-              labelStyle={styles.buttonLabel}
+              mode="text" 
+              onPress={() => navigation.navigate('Signup')}
+              labelStyle={styles.signupButton}
+              textColor={colors.dark.primary}
             >
-              Login
+              Sign Up
             </Button>
-
-            <View style={styles.signupContainer}>
-              <Text style={styles.signupText}>Don't have an account? </Text>
-              <Button 
-                mode="text" 
-                onPress={() => navigation.navigate('Signup')}
-                labelStyle={styles.signupButton}
-              >
-                Sign Up
-              </Button>
-            </View>
           </View>
-        </ScrollView>
+        </View>
+      </ScrollView>
 
-        <Snackbar
-          visible={!!error}
-          onDismiss={() => setError('')}
-          duration={3000}
-          style={styles.snackbar}
-        >
-          {error}
-        </Snackbar>
-      </LinearGradient>
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError('')}
+        duration={3000}
+        style={styles.snackbar}
+      >
+        {error}
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 }
@@ -120,62 +123,45 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  gradient: {
-    flex: 1,
+    backgroundColor: colors.dark.background,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 60,
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.lg,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxl,
   },
   logoContainer: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 40,
-    marginBottom: 20,
+    backgroundColor: colors.dark.surface,
+    borderRadius: 32,
+    marginBottom: spacing.lg,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: colors.dark.text,
+    marginBottom: spacing.sm,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    color: colors.dark.textSecondary,
   },
-  formCard: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 30,
+  form: {
     flex: 1,
   },
-  formTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  formSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
-  },
   input: {
-    marginBottom: 16,
-    backgroundColor: '#fff',
+    marginBottom: spacing.md,
+    backgroundColor: colors.dark.surface,
   },
   button: {
-    marginTop: 10,
+    marginTop: spacing.md,
     borderRadius: 12,
-    backgroundColor: '#6200ee',
   },
   buttonContent: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   buttonLabel: {
     fontSize: 16,
@@ -185,18 +171,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: spacing.lg,
   },
   signupText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.dark.textSecondary,
   },
   signupButton: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6200ee',
   },
   snackbar: {
-    backgroundColor: '#f44336',
+    backgroundColor: colors.dark.error,
   },
 });

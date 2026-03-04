@@ -32,5 +32,6 @@ public class BusinessException extends RuntimeException {
         public static final String USER_NOT_FOUND = "USER_NOT_FOUND";
         public static final String VPA_ALREADY_EXISTS = "VPA_ALREADY_EXISTS";
         public static final String PRIMARY_VPA_NOT_FOUND = "PRIMARY_VPA_NOT_FOUND";
+        public static final String INVALID_TRANSACTION = "INVALID_TRANSACTION";
     }
 }

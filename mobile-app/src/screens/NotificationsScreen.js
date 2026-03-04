@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { Text, Card, IconButton, Button, Chip } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { Text, IconButton, Button } from 'react-native-paper';
+import CustomHeader from '../components/CustomHeader';
 import { notificationAPI } from '../services/api';
+import { colors, spacing } from '../config/theme';
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -68,11 +70,11 @@ export default function NotificationsScreen() {
 
   const getNotificationColor = (type) => {
     switch (type) {
-      case 'MONEY_RECEIVED': return '#4caf50';
-      case 'MONEY_SENT': return '#2196f3';
-      case 'TRANSACTION_SUCCESS': return '#4caf50';
-      case 'TRANSACTION_FAILED': return '#f44336';
-      default: return '#6200ee';
+      case 'MONEY_RECEIVED': return colors.dark.success;
+      case 'MONEY_SENT': return colors.dark.primary;
+      case 'TRANSACTION_SUCCESS': return colors.dark.success;
+      case 'TRANSACTION_FAILED': return colors.dark.error;
+      default: return colors.dark.info;
     }
   };
 
@@ -88,94 +90,75 @@ export default function NotificationsScreen() {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
   };
 
   const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        {unreadCount > 0 && (
-          <Button mode="text" onPress={handleMarkAllAsRead}>
-            Mark all as read
-          </Button>
-        )}
-      </View>
+      <CustomHeader 
+        title="Notifications" 
+        onBack={() => navigation.goBack()}
+        rightIcon={unreadCount > 0 ? "check-all" : null}
+        onRightPress={handleMarkAllAsRead}
+      />
 
       <ScrollView
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={colors.dark.primary}
+            colors={[colors.dark.primary]}
+          />
         }
       >
         <View style={styles.content}>
           {!notifications || notifications.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Card.Content>
-                <Text style={styles.emptyText}>No notifications</Text>
-                <Text style={styles.emptySubtext}>
-                  You're all caught up!
-                </Text>
-              </Card.Content>
-            </Card>
+            <View style={styles.emptyState}>
+              <IconButton icon="bell-outline" size={64} iconColor={colors.dark.textSecondary} />
+              <Text style={styles.emptyText}>No notifications</Text>
+              <Text style={styles.emptySubtext}>You're all caught up!</Text>
+            </View>
           ) : (
             notifications.map((notification) => (
-              <Card 
-                key={notification.id} 
+              <TouchableOpacity
+                key={notification.id}
                 style={[
                   styles.notificationCard,
                   !notification.isRead && styles.unreadCard
                 ]}
+                onPress={() => !notification.isRead && handleMarkAsRead(notification.id)}
               >
-                <Card.Content>
+                <View style={[
+                  styles.iconContainer,
+                  { backgroundColor: getNotificationColor(notification.type) + '20' }
+                ]}>
+                  <IconButton
+                    icon={getNotificationIcon(notification.type)}
+                    size={24}
+                    iconColor={getNotificationColor(notification.type)}
+                    style={{ margin: 0 }}
+                  />
+                </View>
+                <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
-                    <View style={styles.notificationInfo}>
-                      <IconButton
-                        icon={getNotificationIcon(notification.type)}
-                        size={24}
-                        iconColor={getNotificationColor(notification.type)}
-                      />
-                      <View style={styles.notificationText}>
-                        <Text style={styles.notificationTitle}>
-                          {notification.title}
-                        </Text>
-                        <Text style={styles.notificationMessage}>
-                          {notification.message}
-                        </Text>
-                        <Text style={styles.notificationDate}>
-                          {formatDate(notification.createdAt)}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.notificationActions}>
-                      {!notification.isRead && (
-                        <Chip 
-                          mode="flat" 
-                          style={styles.unreadChip}
-                          textStyle={styles.unreadText}
-                        >
-                          New
-                        </Chip>
-                      )}
-                      <IconButton
-                        icon="delete"
-                        size={20}
-                        onPress={() => handleDelete(notification.id)}
-                      />
-                    </View>
+                    <Text style={styles.notificationTitle}>{notification.title}</Text>
+                    {!notification.isRead && <View style={styles.unreadDot} />}
                   </View>
-                  {!notification.isRead && (
-                    <Button 
-                      mode="text" 
-                      onPress={() => handleMarkAsRead(notification.id)}
-                      style={styles.markReadButton}
-                    >
-                      Mark as read
-                    </Button>
-                  )}
-                </Card.Content>
-              </Card>
+                  <Text style={styles.notificationMessage}>{notification.message}</Text>
+                  <Text style={styles.notificationDate}>{formatDate(notification.createdAt)}</Text>
+                </View>
+                <IconButton
+                  icon="close"
+                  size={20}
+                  iconColor={colors.dark.textSecondary}
+                  onPress={() => handleDelete(notification.id)}
+                  style={{ margin: 0 }}
+                />
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -187,84 +170,77 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#6200ee',
+    backgroundColor: colors.dark.background,
   },
   content: {
-    padding: 15,
+    padding: spacing.md,
   },
-  emptyCard: {
-    marginTop: 20,
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl * 2,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
+    fontWeight: '600',
+    color: colors.dark.text,
+    marginTop: spacing.md,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: colors.dark.textSecondary,
+    marginTop: spacing.sm,
   },
   notificationCard: {
-    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.dark.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
   },
   unreadCard: {
     borderLeftWidth: 4,
-    borderLeftColor: '#6200ee',
+    borderLeftColor: colors.dark.primary,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationContent: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   notificationHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  notificationInfo: {
-    flexDirection: 'row',
-    flex: 1,
-  },
-  notificationText: {
-    flex: 1,
+    alignItems: 'center',
+    marginBottom: 4,
   },
   notificationTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: '600',
+    color: colors.dark.text,
+    flex: 1,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.dark.primary,
+    marginLeft: spacing.sm,
   },
   notificationMessage: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
+    color: colors.dark.textSecondary,
+    marginBottom: 4,
   },
   notificationDate: {
     fontSize: 12,
-    color: '#999',
-  },
-  notificationActions: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  unreadChip: {
-    backgroundColor: '#6200ee',
-    marginTop: 5,
-  },
-  unreadText: {
-    color: 'white',
-    fontSize: 10,
-  },
-  markReadButton: {
-    marginTop: 10,
+    color: colors.dark.textTertiary,
   },
 });

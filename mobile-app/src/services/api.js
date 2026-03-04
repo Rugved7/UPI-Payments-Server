@@ -85,4 +85,24 @@ export const notificationAPI = {
   delete: (id) => api.delete(`/notifications/${id}`),
 };
 
+// Payment Request APIs
+export const paymentRequestAPI = {
+  create: (data) => api.post('/payment-requests', data),
+  accept: (requestId, upiPin) => api.post(`/payment-requests/${requestId}/accept?upiPin=${upiPin}`),
+  reject: (requestId) => api.post(`/payment-requests/${requestId}/reject`),
+  getById: (requestId) => api.get(`/payment-requests/${requestId}`),
+  getSent: () => api.get('/payment-requests/sent'),
+  getReceived: () => api.get('/payment-requests/received'),
+  getAll: () => api.get('/payment-requests'),
+  getPendingCount: () => api.get('/payment-requests/pending/count'),
+};
+
+// Profile APIs
+export const profileAPI = {
+  get: () => api.get('/profile'),
+  update: (data) => api.put('/profile', data),
+  changePassword: (data) => api.post('/profile/change-password', data),
+  deleteAccount: () => api.delete('/profile'),
+};
+
 export default api;

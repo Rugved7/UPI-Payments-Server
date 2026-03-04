@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, Text, Snackbar, Dialog, Portal, IconButton } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import { transactionAPI } from '../services/api';
+import { TextInput, Button, Text, Snackbar, Dialog, Portal, Chip } from 'react-native-paper';
+import CustomHeader from '../components/CustomHeader';
+import { transactionAPI, vpaAPI } from '../services/api';
+import { colors, spacing } from '../config/theme';
 
 export default function SendMoneyScreen({ navigation }) {
   const [receiverVpa, setReceiverVpa] = useState('');
@@ -10,18 +11,51 @@ export default function SendMoneyScreen({ navigation }) {
   const [description, setDescription] = useState('');
   const [upiPin, setUpiPin] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [vpaVerified, setVpaVerified] = useState(false);
   const [error, setError] = useState('');
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [success, setSuccess] = useState('');
 
-  const handleContinue = () => {
+  const handleVerifyVpa = async () => {
+    if (!receiverVpa) {
+      setError('Please enter receiver VPA');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const response = await vpaAPI.checkAvailability(receiverVpa);
+      const isAvailable = response.data.data;
+      
+      if (!isAvailable) {
+        setVpaVerified(true);
+        setError('');
+      } else {
+        setVpaVerified(false);
+        setError('This VPA does not exist');
+      }
+    } catch (error) {
+      setVpaVerified(false);
+      setError('Failed to verify VPA');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleContinue = async () => {
     if (!receiverVpa || !amount) {
-      setError('Please fill receiver VPA and amount');
+      setError('Please fill all required fields');
       return;
     }
 
     if (parseFloat(amount) <= 0) {
       setError('Amount must be greater than 0');
+      return;
+    }
+
+    if (!vpaVerified) {
+      setError('Please verify the receiver VPA first');
       return;
     }
 
@@ -59,98 +93,116 @@ export default function SendMoneyScreen({ navigation }) {
     }
   };
 
+  const handleVpaChange = (text) => {
+    setReceiverVpa(text);
+    setVpaVerified(false);
+  };
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <LinearGradient
-        colors={['#6200ee', '#7c3aed']}
-        style={styles.header}
-      >
-        <IconButton 
-          icon="arrow-left" 
-          size={24} 
-          iconColor="#fff" 
-          onPress={() => navigation.goBack()}
-        />
-        <Text style={styles.headerTitle}>Send Money</Text>
-        <View style={{ width: 40 }} />
-      </LinearGradient>
+      <CustomHeader 
+        title="Send Money" 
+        onBack={() => navigation.goBack()}
+      />
 
-      <ScrollView style={styles.content}>
-        <View style={styles.card}>
-          <View style={styles.inputContainer}>
-            <IconButton icon="account-circle" size={24} iconColor="#6200ee" />
-            <TextInput
-              label="Receiver VPA"
-              value={receiverVpa}
-              onChangeText={setReceiverVpa}
-              mode="flat"
-              autoCapitalize="none"
-              placeholder="friend@paytm"
-              style={styles.input}
-              underlineColor="transparent"
-              activeUnderlineColor="transparent"
-            />
-          </View>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.inputCard}>
+          <TextInput
+            label="To VPA"
+            value={receiverVpa}
+            onChangeText={handleVpaChange}
+            mode="outlined"
+            autoCapitalize="none"
+            placeholder="friend@paytm"
+            style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
+            left={<TextInput.Icon icon="account-circle-outline" color={colors.dark.textSecondary} />}
+            right={vpaVerified && <TextInput.Icon icon="check-circle" color={colors.dark.success} />}
+          />
 
-          <View style={styles.inputContainer}>
-            <IconButton icon="currency-inr" size={24} iconColor="#6200ee" />
-            <TextInput
-              label="Amount"
-              value={amount}
-              onChangeText={setAmount}
-              mode="flat"
-              keyboardType="numeric"
-              placeholder="0.00"
-              style={styles.input}
-              underlineColor="transparent"
-              activeUnderlineColor="transparent"
-            />
-          </View>
+          {receiverVpa && !vpaVerified && (
+            <Button 
+              mode="outlined" 
+              onPress={handleVerifyVpa}
+              loading={verifying}
+              style={styles.verifyButton}
+              textColor={colors.dark.primary}
+            >
+              Verify VPA
+            </Button>
+          )}
 
-          <View style={styles.inputContainer}>
-            <IconButton icon="message-text" size={24} iconColor="#6200ee" />
-            <TextInput
-              label="Description (Optional)"
-              value={description}
-              onChangeText={setDescription}
-              mode="flat"
-              placeholder="Add a note"
-              style={styles.input}
-              underlineColor="transparent"
-              activeUnderlineColor="transparent"
-            />
-          </View>
+          <TextInput
+            label="Amount"
+            value={amount}
+            onChangeText={setAmount}
+            mode="outlined"
+            keyboardType="numeric"
+            placeholder="0.00"
+            style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
+            left={<TextInput.Icon icon="currency-inr" color={colors.dark.textSecondary} />}
+          />
+
+          <TextInput
+            label="Note (Optional)"
+            value={description}
+            onChangeText={setDescription}
+            mode="outlined"
+            placeholder="Add a note"
+            style={styles.input}
+            outlineColor={colors.dark.border}
+            activeOutlineColor={colors.dark.primary}
+            textColor={colors.dark.text}
+            theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
+            left={<TextInput.Icon icon="message-text-outline" color={colors.dark.textSecondary} />}
+          />
         </View>
 
         <Button 
           mode="contained" 
           onPress={handleContinue}
+          disabled={!vpaVerified}
           style={styles.button}
           contentStyle={styles.buttonContent}
-          labelStyle={styles.buttonLabel}
+          buttonColor={colors.dark.primary}
+          textColor={colors.dark.onPrimary}
         >
-          Continue to Pay
+          Continue
         </Button>
 
-        <View style={styles.infoBox}>
-          <IconButton icon="information" size={20} iconColor="#6200ee" />
-          <Text style={styles.infoText}>
-            Transaction limits: ₹50,000 per transaction, ₹1,00,000 daily
-          </Text>
-        </View>
+        {vpaVerified && (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              ✓ VPA verified. Ready to send payment.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       <Portal>
-        <Dialog visible={showPinDialog} onDismiss={() => setShowPinDialog(false)} style={styles.dialog}>
+        <Dialog 
+          visible={showPinDialog} 
+          onDismiss={() => setShowPinDialog(false)}
+          style={styles.dialog}
+        >
           <Dialog.Title style={styles.dialogTitle}>Enter UPI PIN</Dialog.Title>
           <Dialog.Content>
             <View style={styles.confirmBox}>
               <Text style={styles.confirmLabel}>Paying to</Text>
               <Text style={styles.confirmVpa}>{receiverVpa}</Text>
-              <Text style={styles.confirmAmount}>₹{parseFloat(amount || 0).toLocaleString('en-IN')}</Text>
+              <Text style={styles.confirmAmount}>
+                ₹{parseFloat(amount || 0).toLocaleString('en-IN')}
+              </Text>
             </View>
             <TextInput
               label="UPI PIN"
@@ -161,19 +213,21 @@ export default function SendMoneyScreen({ navigation }) {
               keyboardType="numeric"
               maxLength={4}
               style={styles.pinInput}
-              outlineColor="#e0e0e0"
-              activeOutlineColor="#6200ee"
+              outlineColor={colors.dark.border}
+              activeOutlineColor={colors.dark.primary}
+              textColor={colors.dark.text}
+              theme={{ colors: { onSurfaceVariant: colors.dark.textSecondary } }}
             />
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setShowPinDialog(false)} textColor="#666">
+            <Button onPress={() => setShowPinDialog(false)} textColor={colors.dark.textSecondary}>
               Cancel
             </Button>
             <Button 
               onPress={handleSendMoney} 
               loading={loading}
               mode="contained"
-              style={styles.payButton}
+              buttonColor={colors.dark.primary}
             >
               Pay Now
             </Button>
@@ -185,7 +239,7 @@ export default function SendMoneyScreen({ navigation }) {
         visible={!!error}
         onDismiss={() => setError('')}
         duration={3000}
-        style={styles.errorSnackbar}
+        style={{ backgroundColor: colors.dark.error }}
       >
         {error}
       </Snackbar>
@@ -194,7 +248,7 @@ export default function SendMoneyScreen({ navigation }) {
         visible={!!success}
         onDismiss={() => setSuccess('')}
         duration={3000}
-        style={styles.successSnackbar}
+        style={{ backgroundColor: colors.dark.success }}
       >
         {success}
       </Snackbar>
@@ -205,114 +259,78 @@ export default function SendMoneyScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    backgroundColor: colors.dark.background,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: spacing.md,
   },
-  card: {
-    backgroundColor: '#fff',
+  inputCard: {
+    backgroundColor: colors.dark.surface,
     borderRadius: 16,
-    padding: 8,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   input: {
-    flex: 1,
-    backgroundColor: 'transparent',
+    marginBottom: spacing.md,
+    backgroundColor: colors.dark.surface,
+  },
+  verifyButton: {
+    marginBottom: spacing.md,
+    borderColor: colors.dark.primary,
   },
   button: {
     borderRadius: 12,
-    marginTop: 10,
-    backgroundColor: '#6200ee',
+    marginBottom: spacing.md,
   },
   buttonContent: {
-    paddingVertical: 8,
-  },
-  buttonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    paddingVertical: spacing.sm,
   },
   infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0ff',
+    backgroundColor: colors.dark.surface,
     borderRadius: 12,
-    padding: 12,
-    marginTop: 20,
+    padding: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.dark.success,
   },
   infoText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 8,
+    fontSize: 14,
+    color: colors.dark.textSecondary,
   },
   dialog: {
+    backgroundColor: colors.dark.surface,
     borderRadius: 20,
   },
   dialogTitle: {
     textAlign: 'center',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: colors.dark.text,
   },
   confirmBox: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.dark.cardElevated,
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     alignItems: 'center',
   },
   confirmLabel: {
     fontSize: 14,
-    color: '#666',
+    color: colors.dark.textSecondary,
   },
   confirmVpa: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: colors.dark.text,
     marginTop: 4,
   },
   confirmAmount: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    marginTop: 8,
+    fontWeight: '700',
+    color: colors.dark.primary,
+    marginTop: spacing.sm,
   },
   pinInput: {
-    marginTop: 10,
-    backgroundColor: '#fff',
-  },
-  payButton: {
-    marginLeft: 8,
-  },
-  errorSnackbar: {
-    backgroundColor: '#f44336',
-  },
-  successSnackbar: {
-    backgroundColor: '#4caf50',
+    backgroundColor: colors.dark.surface,
   },
 });
